@@ -1,0 +1,8 @@
+## {{ .Heading }}
+
+{{ .Description }}
+
+| Output | Value | Type
+| --- | --- | --- |
+{{ range $key, $value := .Outputs }}| {{ $key }} | <pre lang="json">{{ jsonValue $value }}</pre> | {{ dataType $value }}
+{{ end }}

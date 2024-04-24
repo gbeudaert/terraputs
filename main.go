@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	tfjson "github.com/hashicorp/terraform-json"
@@ -49,6 +50,24 @@ func value(output tfjson.StateOutput) string {
 	}
 
 	return fmt.Sprintf("%v", output.Value)
+}
+
+func jsonValue(output tfjson.StateOutput) template.HTML {
+	if output.Sensitive {
+		return template.HTML(sensitive)
+	}
+
+	// Convertir la valeur en JSON avec mise en forme
+	re := regexp.MustCompile(`\r?\n`)
+	jsonData, err := json.MarshalIndent(output.Value, "", "  ") // Indentation par 2 espaces
+	if err != nil {
+		// Gérer l'erreur de marshalling JSON
+		exit(err)
+	}
+
+	// Renvoyer la chaîne JSON formatée
+	formatedData := re.ReplaceAllString(string(jsonData), "<br>")
+	return template.HTML(string(formatedData))
 }
 
 func prettyPrintValue(output tfjson.StateOutput) template.HTML {
@@ -114,6 +133,7 @@ func main() {
 		"value":       value,
 		"dataType":    dataType,
 		"prettyPrint": prettyPrintValue,
+		"jsonValue":   jsonValue,
 	}).ParseFS(templates, tmpl)
 	if err != nil {
 		exit(err)
@@ -140,6 +160,8 @@ func getTemplatePath(output string) (string, error) {
 		return "templates/html.tmpl", nil
 	case "md":
 		return "templates/markdown.tmpl", nil
+	case "mdjson":
+		return "templates/markdown_json.tmpl", nil
 	default:
 		return "", fmt.Errorf("'%s' is not a supported output format. Supported formats: 'md' (default), 'html'", output)
 	}
